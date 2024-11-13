@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.hritik.appreminder.data.AppData
 import com.hritik.appreminder.data.AppsDatabase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,7 @@ class MainViewModel @Inject constructor(
     val trackedPackages = _trackedPackages.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appsDatabase.appsDAO().getAllPackages().collect {
                 _trackedPackages.value = it
             }
@@ -28,7 +29,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun addPackage(packageName:String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appsDatabase.appsDAO().insertAppData(
                 AppData(
                     packageName = packageName,
@@ -41,9 +42,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun removePackage(packageName: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val appData = appsDatabase.appsDAO().getAppdata(packageName)
-
             appData?.let {
                 appsDatabase.appsDAO().deleteAppData(it)
             }

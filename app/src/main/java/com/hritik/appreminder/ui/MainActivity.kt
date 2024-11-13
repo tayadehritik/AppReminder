@@ -23,34 +23,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.get
+import androidx.lifecycle.lifecycleScope
 import com.hritik.appreminder.ui.theme.AppReminderTheme
 import com.hritik.appreminder.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel:MainViewModel by viewModels()
+    private var installedPackages = listOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-
-        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
+        lifecycleScope.launch(Dispatchers.IO) {
+            fetchAllInstalledPackages()
         }
-
-        val installedPackages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.queryIntentActivities(
-                mainIntent,
-                PackageManager.ResolveInfoFlags.of(0L)
-            )
-        } else {
-            packageManager.queryIntentActivities(mainIntent, 0)
-        }.map { it.activityInfo.packageName }
-
-
         setContent {
             AppReminderTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -74,20 +65,19 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AppReminderTheme {
-        Greeting("Android")
+    private fun fetchAllInstalledPackages() {
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        installedPackages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.queryIntentActivities(
+                mainIntent,
+                PackageManager.ResolveInfoFlags.of(0L)
+            )
+        } else {
+            packageManager.queryIntentActivities(mainIntent, 0)
+        }.map { it.activityInfo.packageName }
     }
 }
+

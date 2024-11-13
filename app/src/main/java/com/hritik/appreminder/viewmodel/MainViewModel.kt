@@ -1,12 +1,12 @@
 package com.hritik.appreminder.viewmodel
 
+import android.app.usage.UsageStatsManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hritik.appreminder.data.AppData
 import com.hritik.appreminder.data.AppsDatabase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -14,11 +14,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val appsDatabase: AppsDatabase
+    private val appsDatabase: AppsDatabase,
+    private val usageStatsManager: UsageStatsManager
 ) : ViewModel() {
 
     private val _trackedPackages = MutableStateFlow<List<String>>(listOf())
     val trackedPackages = _trackedPackages.asStateFlow()
+
+    private val _usageStatsPermissionGranted = MutableStateFlow<Boolean>(false)
+    val usageStatsPermissionGranted = _usageStatsPermissionGranted.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -48,6 +52,15 @@ class MainViewModel @Inject constructor(
                 appsDatabase.appsDAO().deleteAppData(it)
             }
         }
+    }
+
+    fun checkUsageStatsPermissionGranted() {
+        val usageStats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_BEST,
+            0,
+            System.currentTimeMillis()
+        )
+        _usageStatsPermissionGranted.value = usageStats.isNotEmpty()
     }
 
 }

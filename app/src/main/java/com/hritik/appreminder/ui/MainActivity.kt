@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val overlayWindow = OverlayWindow(this)
         enableEdgeToEdge()
         lifecycleScope.launch(Dispatchers.IO) {
             fetchAllInstalledPackages()
@@ -64,6 +65,12 @@ class MainActivity : ComponentActivity() {
                             enabled = overlayPermissionGranted.not()
                         ) {
                             Text("Grant Draw Over Other Apps Permission")
+                        }
+                        Button(
+                            onClick = { overlayWindow.open() },
+                            enabled = true
+                        ) {
+                            Text("Show Overlay")
                         }
                         LazyColumn {
                             items(installedPackages) { installedPackage ->

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AppReminder</string>
+    <string name="title_activity_overlay">OverlayActivity</string>
 </resources>

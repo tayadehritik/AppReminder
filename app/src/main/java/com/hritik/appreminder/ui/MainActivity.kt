@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,23 +37,33 @@ class MainActivity : ComponentActivity() {
     private val mainViewModel:MainViewModel by viewModels()
     private var installedPackages = listOf<String>()
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         lifecycleScope.launch(Dispatchers.IO) {
             fetchAllInstalledPackages()
+
         }
         setContent {
             AppReminderTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     val trackedPackages by mainViewModel.trackedPackages.collectAsState()
                     val usageStatsPermissionGranted by mainViewModel.usageStatsPermissionGranted.collectAsState()
+                    val overlayPermissionGranted by mainViewModel.overlayPermissionGranted.collectAsState()
+
                     Column(modifier = Modifier.padding(innerPadding)) {
                         Button(
                             onClick = { grantUsageStatsPermission() },
                             enabled = usageStatsPermissionGranted.not()
                         ) {
                             Text("Grant Usage Stats Permission")
+                        }
+                        Button(
+                            onClick = { grantOverlayPermission() },
+                            enabled = overlayPermissionGranted.not()
+                        ) {
+                            Text("Grant Draw Over Other Apps Permission")
                         }
                         LazyColumn {
                             items(installedPackages) { installedPackage ->
@@ -89,15 +100,26 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun grantUsageStatsPermission() {
-        val usageAccessIntent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-            data = Uri.fromParts("package", packageName, null)
-        }
+        val usageAccessIntent = Intent(
+            Settings.ACTION_USAGE_ACCESS_SETTINGS,
+            Uri.parse("package:$packageName")
+        )
+
         startActivity(usageAccessIntent)
+    }
+
+    private fun grantOverlayPermission() {
+        val overlayIntent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        startActivity(overlayIntent)
     }
 
     override fun onResume() {
         super.onResume()
         mainViewModel.checkUsageStatsPermissionGranted()
+        mainViewModel.checkOverlayPermissionGranted()
     }
 }
 

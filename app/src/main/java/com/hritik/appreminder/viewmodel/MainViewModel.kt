@@ -1,8 +1,13 @@
 package com.hritik.appreminder.viewmodel
 
+import android.app.Application
 import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.os.Build
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hritik.appreminder.AppReminder
 import com.hritik.appreminder.data.AppData
 import com.hritik.appreminder.data.AppsDatabase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val app: Application,
     private val appsDatabase: AppsDatabase,
     private val usageStatsManager: UsageStatsManager
 ) : ViewModel() {
@@ -23,6 +29,9 @@ class MainViewModel @Inject constructor(
 
     private val _usageStatsPermissionGranted = MutableStateFlow<Boolean>(false)
     val usageStatsPermissionGranted = _usageStatsPermissionGranted.asStateFlow()
+
+    private val _overlayPermissionGranted = MutableStateFlow<Boolean>(false)
+    val overlayPermissionGranted = _overlayPermissionGranted.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -62,5 +71,14 @@ class MainViewModel @Inject constructor(
         )
         _usageStatsPermissionGranted.value = usageStats.isNotEmpty()
     }
+
+    fun checkOverlayPermissionGranted() {
+        _overlayPermissionGranted.value = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            true
+        } else {
+            Settings.canDrawOverlays(app)
+        }
+    }
+
 
 }

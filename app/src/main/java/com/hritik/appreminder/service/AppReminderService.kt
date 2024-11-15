@@ -16,20 +16,38 @@ import com.hritik.appreminder.ui.MainActivity
 import java.util.Timer
 import kotlin.concurrent.timerTask
 import com.hritik.appreminder.R
+import com.hritik.appreminder.data.AppData
+import com.hritik.appreminder.data.AppsDatabase
 import com.hritik.appreminder.ui.OverlayWindow
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AppReminderService:Service() {
     var timer = Timer()
     var currentlyOpenedApp = "NA"
 
+    @Inject
+    lateinit var appsDatabase: AppsDatabase
+
+    val trackedApps = MutableStateFlow<List<AppData>>(listOf())
+    val trackedPackages = MutableStateFlow<List<String>>(listOf())
 
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        println("here")
+
+        CoroutineScope(Dispatchers.IO).launch {
+            appsDatabase.appsDAO().getAllAppData().collect { appsData ->
+                trackedApps.value = appsData
+                trackedPackages.value = appsData.map { it.packageName }
+            }
+        }
+
         try {
             val notificationManager = this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -60,12 +78,12 @@ class AppReminderService:Service() {
                 println("---------------------------")
                 while (events.hasNextEvent()) {
                     events.getNextEvent(event)
-                    if(event.packageName == "com.spotify.music" && event.eventType.equals(UsageEvents.Event.ACTIVITY_RESUMED)) {
+                    if(event.packageName in trackedPackages.value && event.eventType.equals(UsageEvents.Event.ACTIVITY_RESUMED)) {
                         CoroutineScope(Dispatchers.Main).launch {
                             overylayWindow.open()
                         }
                     }
-                    else if(event.packageName == "com.spotify.music" && event.eventType.equals(UsageEvents.Event.ACTIVITY_STOPPED)) {
+                    else if(event.packageName in trackedPackages.value && event.eventType.equals(UsageEvents.Event.ACTIVITY_STOPPED)) {
                         CoroutineScope(Dispatchers.Main).launch {
                             overylayWindow.close()
                         }

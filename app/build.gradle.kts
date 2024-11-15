@@ -85,6 +85,7 @@ dependencies {
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
 
     implementation("com.google.android.material:material:1.5.0")
+    implementation("com.google.accompanist:accompanist-drawablepainter:0.36.0")
 }
 
 kapt {

@@ -1,8 +1,10 @@
 package com.hritik.appreminder.viewmodel
 
+import android.Manifest
 import android.app.Application
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
@@ -32,6 +34,9 @@ class MainViewModel @Inject constructor(
 
     private val _overlayPermissionGranted = MutableStateFlow<Boolean>(false)
     val overlayPermissionGranted = _overlayPermissionGranted.asStateFlow()
+
+    private val _notificationPermissionGranted = MutableStateFlow<Boolean>(false)
+    val notificationPermissionGranted = _notificationPermissionGranted.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -78,6 +83,10 @@ class MainViewModel @Inject constructor(
         } else {
             Settings.canDrawOverlays(app)
         }
+    }
+
+    fun checkNotificationPermissionGranted() {
+        _notificationPermissionGranted.value = app.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
 

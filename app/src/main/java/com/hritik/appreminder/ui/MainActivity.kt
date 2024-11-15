@@ -1,5 +1,6 @@
 package com.hritik.appreminder.ui
 
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -25,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.hritik.appreminder.service.AppReminderService
 import com.hritik.appreminder.ui.theme.AppReminderTheme
 import com.hritik.appreminder.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,6 +42,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val serviceIntent = Intent(this, AppReminderService::class.java)
+
         enableEdgeToEdge()
         lifecycleScope.launch(Dispatchers.IO) {
             fetchAllInstalledPackages()
@@ -51,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     val trackedPackages by mainViewModel.trackedPackages.collectAsState()
                     val usageStatsPermissionGranted by mainViewModel.usageStatsPermissionGranted.collectAsState()
                     val overlayPermissionGranted by mainViewModel.overlayPermissionGranted.collectAsState()
+                    val notificationPermissionGranted by mainViewModel.notificationPermissionGranted.collectAsState()
 
                     Column(modifier = Modifier.padding(innerPadding)) {
                         Button(
@@ -64,6 +69,18 @@ class MainActivity : ComponentActivity() {
                             enabled = overlayPermissionGranted.not()
                         ) {
                             Text("Grant Draw Over Other Apps Permission")
+                        }
+                        Button(
+                            onClick = { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),0) },
+                            enabled = notificationPermissionGranted.not()
+                        ) {
+                            Text("Grant Notification Permission")
+                        }
+                        Button(
+                            onClick = { startService(serviceIntent) },
+                            enabled = true
+                        ) {
+                            Text("Start Foreground Service")
                         }
                         LazyColumn {
                             items(installedPackages) { installedPackage ->
@@ -120,6 +137,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         mainViewModel.checkUsageStatsPermissionGranted()
         mainViewModel.checkOverlayPermissionGranted()
+        mainViewModel.checkNotificationPermissionGranted()
     }
 }
 

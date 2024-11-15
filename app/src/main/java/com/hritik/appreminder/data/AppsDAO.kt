@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,5 +19,8 @@ interface AppsDAO {
     suspend fun insertAppData(vararg appData:AppData)
 
     @Delete
-    suspend fun deleteAppData(appData: AppData)
+    suspend fun deleteAppData(vararg appData: AppData)
+
+    @Update
+    suspend fun updateAppData(vararg appData: AppData)
 }

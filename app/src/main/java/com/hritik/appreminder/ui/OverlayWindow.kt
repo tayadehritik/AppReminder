@@ -8,7 +8,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.WindowManager
 import android.widget.Button
-import com.google.android.material.button.MaterialButton
+import androidx.appcompat.view.ContextThemeWrapper
 import com.hritik.appreminder.R
 
 class OverlayWindow(val context:Context) {
@@ -66,7 +66,7 @@ class OverlayWindow(val context:Context) {
     }
 
     private fun initWindow() {
-        rootView.findViewById<MaterialButton>(R.id.close_button).setOnClickListener {
+        rootView.findViewById<Button>(R.id.close_button).setOnClickListener {
             close()
         }
 
@@ -79,12 +79,13 @@ class OverlayWindow(val context:Context) {
     }
 
     fun open() {
+
         try {
             windowManager.addView(rootView, windowParams)
         } catch (e: Exception) {
             // Ignore exception for now, but in production, you should have some
             // warning for the user here.
-            println(e)
+            println(e.localizedMessage)
         }
     }
 

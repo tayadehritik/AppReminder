@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--<style name="Theme.AppReminder" parent="android:Theme.Material.Light.NoActionBar" />-->
-    <style name="Theme.AppReminder" parent="Theme.MaterialComponents" />
+    <style name="Theme.AppReminder" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--<style name="Theme.AppReminder" parent="Theme.AppCompat.Light.NoActionBar" />-->
+    <!--<style name="Theme.TestTheme" parent="Theme.MaterialComponents.Light.NoActionBar" />-->
+
 </resources>

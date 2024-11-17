@@ -1,4 +1,4 @@
-package com.hritik.appreminder.viewmodel.data
+package com.hritik.appreminder.viewmodel
 
 import com.hritik.appreminder.data.AppData
 
@@ -12,5 +12,5 @@ data class MainActivityState(
 
 data class DialogState(
     var enabled: Boolean = false,
-    var packageName: String? = null
+    var packageName: String = "com.hritik.test"
 )

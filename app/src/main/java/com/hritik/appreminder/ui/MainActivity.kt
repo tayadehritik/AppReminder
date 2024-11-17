@@ -25,6 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,6 +44,7 @@ import androidx.lifecycle.lifecycleScope
 import com.hritik.appreminder.service.AppReminderService
 import com.hritik.appreminder.ui.theme.AppReminderTheme
 import com.hritik.appreminder.viewmodel.MainViewModel
+import com.hritik.appreminder.viewmodel.MainActivityState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,7 +66,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         lifecycleScope.launch(Dispatchers.IO) {
             fetchAllInstalledPackages()
-
         }
         setContent {
             AppReminderTheme {
@@ -73,31 +74,17 @@ class MainActivity : ComponentActivity() {
                     val mainActivityState by mainViewModel.mainActivityState.collectAsState()
 
                     Column(modifier = Modifier.padding(innerPadding)) {
-                        Button(
-                            onClick = { grantUsageStatsPermission() },
-                            enabled = mainActivityState.usageStatsPermissionGranted.not()
-                        ) {
-                            Text("Grant Usage Stats Permission")
-                        }
-                        Button(
-                            onClick = { grantOverlayPermission() },
-                            enabled = mainActivityState.overlayPermissionGranted.not()
-                        ) {
-                            Text("Grant Draw Over Other Apps Permission")
-                        }
-                        Button(
-                            onClick = { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),0) },
-                            enabled = mainActivityState.notificationPermissionGranted.not()
-                        ) {
-                            Text("Grant Notification Permission")
-                        }
-                        Button(
-                            onClick = { startService(serviceIntent) },
-                            enabled = true
-                        ) {
-                            Text("Start Foreground Service")
-                        }
+                        ButtonGrid(
+                            mainActivityState = mainActivityState,
+                            grantUsageStatsPermission = { grantUsageStatsPermission() },
+                            grantOverlayPermission = { grantOverlayPermission() },
+                            grantNotificationPermission = { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),0) },
+                            startForegroundService = { startService(serviceIntent) },
+                            dailyReset = { mainViewModel.dailyRest() }
+                        )
+                        HorizontalDivider()
                         LazyColumn(
+                            modifier = Modifier.padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(installedPackages) { installedPackage ->
@@ -133,21 +120,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun fetchAllInstalledPackages() {
+    fun fetchAllInstalledPackages() {
         val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        lifecycleScope.launch(Dispatchers.IO) {
-            installedPackages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.queryIntentActivities(
-                    mainIntent,
-                    PackageManager.ResolveInfoFlags.of(0L)
-                )
-            } else {
-                packageManager.queryIntentActivities(mainIntent, 0)
-            }.map { it.activityInfo.packageName }
-        }
 
+        installedPackages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.queryIntentActivities(
+                mainIntent,
+                PackageManager.ResolveInfoFlags.of(0L)
+            )
+        } else {
+            packageManager.queryIntentActivities(mainIntent, 0)
+        }.map { it.activityInfo.packageName }
     }
 
     private fun grantUsageStatsPermission() {
@@ -172,6 +157,62 @@ class MainActivity : ComponentActivity() {
         mainViewModel.checkUsageStatsPermissionGranted()
         mainViewModel.checkOverlayPermissionGranted()
         mainViewModel.checkNotificationPermissionGranted()
+
+    }
+}
+
+@Preview
+@Composable
+fun ButtonGrid(
+    mainActivityState: MainActivityState = MainActivityState(),
+    grantUsageStatsPermission:() -> Unit = {},
+    grantOverlayPermission:() -> Unit = {},
+    grantNotificationPermission:() -> Unit = {},
+    startForegroundService:() -> Unit = {},
+    dailyReset:() -> Unit = {}
+) {
+    Column(
+        modifier = Modifier.padding(10.dp)
+    ){
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = grantUsageStatsPermission,
+            enabled = mainActivityState.usageStatsPermissionGranted.not()
+        ) {
+            Text("Grant Usage Stats Permission")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = grantOverlayPermission,
+            enabled = mainActivityState.overlayPermissionGranted.not()
+        ) {
+            Text("Grant Draw Over Other Apps Permission")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = grantNotificationPermission,
+            enabled = mainActivityState.notificationPermissionGranted.not()
+        ) {
+            Text("Grant Notification Permission")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = startForegroundService,
+            enabled = (
+                    mainActivityState.usageStatsPermissionGranted &&
+                            mainActivityState.overlayPermissionGranted &&
+                            mainActivityState.notificationPermissionGranted
+                    )
+        ) {
+            Text("Start Foreground Service")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = dailyReset,
+            enabled = true
+        ) {
+            Text("Daily Reset")
+        }
     }
 }
 
@@ -188,13 +229,20 @@ fun appItem(
     OutlinedCard(onClick = onClicked) {
         Column {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(name)
-                    Text("${timeLimit.milliseconds.inWholeHours} hrs ${timeLimit.milliseconds.inWholeMinutes} mins Limit")
+                    Text(
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        style = MaterialTheme.typography.titleMedium,
+                        text =name)
+                    Text(
+                        style = MaterialTheme.typography.labelMedium,
+                        text = "${timeLimit.milliseconds.inWholeHours % 24} hrs ${timeLimit.milliseconds.inWholeMinutes % 60} mins Limit")
                 }
                 Checkbox(
                     checked = checked,
@@ -217,8 +265,8 @@ fun timeDialog(
     onConfirmRequest:(TimePickerState) -> Unit = {}
 ) {
     val timePickerState = rememberTimePickerState(
-        initialHour = timeLimit.milliseconds.inWholeHours.toInt(),
-        initialMinute = timeLimit.milliseconds.inWholeMinutes.toInt(),
+        initialHour = timeLimit.milliseconds.inWholeHours.toInt() % 24,
+        initialMinute = timeLimit.milliseconds.inWholeMinutes.toInt() % 60,
         is24Hour = true,
     )
 

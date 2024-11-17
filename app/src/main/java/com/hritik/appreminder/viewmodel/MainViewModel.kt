@@ -11,9 +11,7 @@ import androidx.compose.material3.TimePickerState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hritik.appreminder.data.AppData
-import com.hritik.appreminder.data.AppsDatabase
-import com.hritik.appreminder.viewmodel.data.DialogState
-import com.hritik.appreminder.viewmodel.data.MainActivityState
+import com.hritik.appreminder.data.AppsDAO
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val app: Application,
-    private val appsDatabase: AppsDatabase,
+    private val appsDAO: AppsDAO,
     private val usageStatsManager: UsageStatsManager
 ) : ViewModel() {
 
@@ -33,7 +31,7 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            appsDatabase.appsDAO().getAllAppData().collect {
+            appsDAO.getAllAppData().collect {
                 _mainActivityState.value = _mainActivityState.value.copy(
                    trackedApps = it.associateBy { it.packageName }
                 )
@@ -43,35 +41,30 @@ class MainViewModel @Inject constructor(
 
     fun addPackage(packageName:String) {
         viewModelScope.launch(Dispatchers.IO) {
-            appsDatabase.appsDAO().insertAppData(
-                AppData(
-                    packageName = packageName,
-                    timeLimit = 0,
-                    timeSpent = null,
-                    extendedTime = null
-                )
-            )
+            appsDAO.insertAppData(AppData(packageName))
         }
     }
 
     fun removePackage(packageName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val appData = _mainActivityState.value.trackedApps.get(packageName)
+            val appData = appsDAO.getAppdata(packageName)
             appData?.let {
-                appsDatabase.appsDAO().deleteAppData(it)
+                appsDAO.deleteAppData(appData)
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    fun updateTimeLimit(packageName: String?, timePickerState: TimePickerState) {
+    fun updateTimeLimit(packageName: String, timePickerState: TimePickerState) {
         viewModelScope.launch(Dispatchers.IO) {
-            val appData = _mainActivityState.value.trackedApps.get(packageName)
-            appData?.let {
-                it.timeLimit = (timePickerState.hour * 60 * 60 * 1000L) + (timePickerState.minute * 60 * 1000L)
-                println(it)
-                appsDatabase.appsDAO().updateAppData(it)
-            }
+            val newTimeLimit = (timePickerState.hour * 60 * 60 * 1000L) + (timePickerState.minute * 60 * 1000L)
+            appsDAO.updateTimeLimit(packageName, newTimeLimit)
+        }
+    }
+
+    fun dailyRest() {
+        viewModelScope.launch(Dispatchers.IO) {
+            appsDAO.dailyReset()
         }
     }
 
@@ -98,17 +91,23 @@ class MainViewModel @Inject constructor(
 
     fun checkNotificationPermissionGranted() {
         _mainActivityState.value = _mainActivityState.value.copy(
-            notificationPermissionGranted = app.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            notificationPermissionGranted = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                true
+            } else {
+                app.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            }
+
         )
     }
 
     fun setDialogEnabled(
         value: Boolean,
-        packageName: String? = _mainActivityState.value.dialogState.packageName
+        packageName: String = _mainActivityState.value.dialogState.packageName
     ) {
         _mainActivityState.value = _mainActivityState.value.copy(
             dialogState = DialogState(enabled = value, packageName = packageName)
         )
     }
+
 
 }

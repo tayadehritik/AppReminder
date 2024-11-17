@@ -1,11 +1,12 @@
 package com.hritik.appreminder.di
 
-
 import android.app.Application
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import androidx.room.Room
+import com.hritik.appreminder.data.AppsDAO
 import com.hritik.appreminder.data.AppsDatabase
+import com.hritik.appreminder.ui.OverlayWindow
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +23,12 @@ object AppModule {
         return Room.databaseBuilder(
             app,
             AppsDatabase::class.java, "apps-database"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
+    }
+
+    @Provides
+    fun provideAppsDao(db: AppsDatabase): AppsDAO {
+        return db.appsDAO()
     }
 
     @Provides
@@ -31,6 +37,9 @@ object AppModule {
         return app.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     }
 
-
-
+    @Provides
+    @Singleton
+    fun providesOverlayWindow(app:Application, appsDAO: AppsDAO): OverlayWindow {
+        return OverlayWindow(app, appsDAO)
+    }
 }

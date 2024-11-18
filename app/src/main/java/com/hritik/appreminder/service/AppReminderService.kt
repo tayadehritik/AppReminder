@@ -14,23 +14,22 @@ import kotlin.concurrent.timerTask
 import com.hritik.appreminder.R
 import com.hritik.appreminder.data.AppData
 import com.hritik.appreminder.data.AppsDAO
-import com.hritik.appreminder.ui.OverlayWindow
+import com.hritik.appreminder.ui.OverlayActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppReminderService :Service() {
 
     @Inject lateinit var appsDAO: AppsDAO
-    @Inject lateinit var overlayWindow: OverlayWindow
     @Inject lateinit var usageStatsManager: UsageStatsManager
 
     var timer = Timer()
     var trackedApps = mapOf<String, AppData>()
+    var activeApp:AppData? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -42,6 +41,9 @@ class AppReminderService :Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val overlayIntent = Intent(this, OverlayActivity::class.java)
+        overlayIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this,
             0,notificationIntent,PendingIntent.FLAG_IMMUTABLE)
@@ -57,8 +59,8 @@ class AppReminderService :Service() {
 
         timer.schedule(timerTask {
             CoroutineScope(Dispatchers.IO).launch {
-                monitorEvents()
-                logUsage()
+                monitorEvents(overlayIntent)
+                logUsage(overlayIntent)
             }
         }, 0,  1000)
 
@@ -69,48 +71,39 @@ class AppReminderService :Service() {
         return null
     }
 
-    suspend fun monitorEvents() {
+    fun monitorEvents(overlayIntent: Intent) {
         val events = usageStatsManager.queryEvents(System.currentTimeMillis()-(1000), System.currentTimeMillis())
         val event = UsageEvents.Event()
-
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val appData = trackedApps[event.packageName]
             if(appData != null){
                 when(event.eventType) {
                     UsageEvents.Event.ACTIVITY_RESUMED -> {
-                        appsDAO.updateState(event.packageName , UsageEvents.Event.ACTIVITY_RESUMED)
+                        activeApp = appData
                         if(appData.extendedTime <= 0) {
-                            withContext(Dispatchers.Main) {
-                                overlayWindow.open(trackedApps[event.packageName])
-                            }
+                            overlayIntent.putExtra("packageName",appData.packageName)
+                            startActivity(overlayIntent)
                         }
                     }
                     UsageEvents.Event.ACTIVITY_PAUSED -> {
-                        appsDAO.updateState(event.packageName , UsageEvents.Event.ACTIVITY_PAUSED)
-                        withContext(Dispatchers.Main) {
-                            overlayWindow.close()
-                        }
+                        activeApp = null
                     }
                 }
             }
         }
     }
 
-    suspend fun logUsage() {
-        val currentlyOpenedApp: AppData? = appsDAO.getActiveApp()
-        currentlyOpenedApp?.let {
-            if(it.extendedTime > 0 && it.timeSpent < it.timeLimit) {
-                appsDAO.updateAppUsage(
-                    currentlyOpenedApp.packageName,
-                    currentlyOpenedApp.extendedTime - 1000L,
-                    currentlyOpenedApp.timeSpent + 1000L
-                )
+    suspend fun logUsage(overlayIntent:Intent) {
+        activeApp?.let { activeApp ->
+            if(activeApp.extendedTime > 0 && activeApp.timeSpent < activeApp.timeLimit){
+                activeApp.extendedTime -= 1000L
+                activeApp.timeSpent += 1000L
+                appsDAO.updateAppData(activeApp)
             }
-            else {
-                withContext(Dispatchers.Main) {
-                    overlayWindow.open(it)
-                }
+            else{
+                overlayIntent.putExtra("packageName",activeApp.packageName)
+                startActivity(overlayIntent)
             }
         }
     }

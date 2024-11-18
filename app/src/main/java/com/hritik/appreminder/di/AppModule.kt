@@ -6,7 +6,6 @@ import android.content.Context
 import androidx.room.Room
 import com.hritik.appreminder.data.AppsDAO
 import com.hritik.appreminder.data.AppsDatabase
-import com.hritik.appreminder.ui.OverlayWindow
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,9 +36,4 @@ object AppModule {
         return app.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     }
 
-    @Provides
-    @Singleton
-    fun providesOverlayWindow(app:Application, appsDAO: AppsDAO): OverlayWindow {
-        return OverlayWindow(app, appsDAO)
-    }
 }

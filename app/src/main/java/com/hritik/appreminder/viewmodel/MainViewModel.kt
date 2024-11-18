@@ -6,6 +6,7 @@ import android.app.usage.UsageStatsManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TimePickerState
 import androidx.lifecycle.ViewModel
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -57,12 +59,23 @@ class MainViewModel @Inject constructor(
     @OptIn(ExperimentalMaterial3Api::class)
     fun updateTimeLimit(packageName: String, timePickerState: TimePickerState) {
         viewModelScope.launch(Dispatchers.IO) {
-            val newTimeLimit = (timePickerState.hour * 60 * 60 * 1000L) + (timePickerState.minute * 60 * 1000L)
-            appsDAO.updateTimeLimit(packageName, newTimeLimit)
+            val appData = appsDAO.getAppdata(packageName)
+            appData?.let {
+                val newTimeLimit = (timePickerState.hour * 60 * 60 * 1000L) + (timePickerState.minute * 60 * 1000L)
+                if(newTimeLimit > appData.timeSpent) {
+                    appData.timeLimit = newTimeLimit
+                    appsDAO.updateAppData(appData)
+                }
+                else {
+                    withContext(Dispatchers.Main){
+                        Toast.makeText(app, "Time limit cannot be less than time spent today", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 
-    fun dailyRest() {
+    fun dailyReset() {
         viewModelScope.launch(Dispatchers.IO) {
             appsDAO.dailyReset()
         }
@@ -108,6 +121,4 @@ class MainViewModel @Inject constructor(
             dialogState = DialogState(enabled = value, packageName = packageName)
         )
     }
-
-
 }

@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -56,7 +57,6 @@ class MainActivity : ComponentActivity() {
 
     private val mainViewModel:MainViewModel by viewModels()
     private var installedPackages = listOf<String>()
-
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
                             grantOverlayPermission = { grantOverlayPermission() },
                             grantNotificationPermission = { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),0) },
                             startForegroundService = { startService(serviceIntent) },
-                            dailyReset = { mainViewModel.dailyRest() }
+                            dailyReset = { mainViewModel.dailyReset() }
                         )
                         HorizontalDivider()
                         LazyColumn(
@@ -103,13 +103,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         if(mainActivityState.dialogState.enabled) {
+                            val localContext = LocalContext.current
                             timeDialog(
                                 timeLimit = mainActivityState.trackedApps.get(mainActivityState.dialogState.packageName)?.timeLimit ?: 0,
                                 onDismissRequest = {
                                     mainViewModel.setDialogEnabled(false)
                                 },
                                 onConfirmRequest = { timePickerState ->
-                                    mainViewModel.updateTimeLimit(mainActivityState.dialogState.packageName, timePickerState)
+                                    mainViewModel.updateTimeLimit(packageName = mainActivityState.dialogState.packageName, timePickerState = timePickerState,)
                                     mainViewModel.setDialogEnabled(false)
                                 }
                             )

@@ -41,6 +41,7 @@ import com.hritik.appreminder.viewmodel.OverlayViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.runtime.getValue
 import com.hritik.appreminder.ui.theme.AppReminderTheme
+import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
@@ -52,7 +53,7 @@ class OverlayActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val packageName: String? = intent.getStringExtra("packageName")
-        overlayViewModel.getAppData(packageName)
+        overlayViewModel.setOverlayActivityState(packageName)
         enableEdgeToEdge()
         setContent {
             AppReminderTheme {
@@ -60,7 +61,7 @@ class OverlayActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Transparent
                 ) {
-                    val appData by overlayViewModel.appData.collectAsState()
+                    val overlayActivityState by overlayViewModel.overlayActivityState.collectAsState()
                     val sheetState = rememberModalBottomSheetState(
                         confirmValueChange = { it ->
                             !(it == SheetValue.Hidden || it == SheetValue.Expanded)
@@ -68,22 +69,27 @@ class OverlayActivity : ComponentActivity() {
                     )
                     ModalBottomSheet(
                         sheetState = sheetState,
-                        onDismissRequest = {},
+                        onDismissRequest = { closeApplication() },
                         windowInsets = WindowInsets(0,0,0,0),
                         dragHandle = {}
                     ) {
+
                         Column(
                             modifier = Modifier.padding(15.dp,20.dp,15.dp,40.dp),
                             verticalArrangement = Arrangement.spacedBy(15.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            UsageCard(appData = appData)
+                            UsageCard(
+                                appData = overlayActivityState.appData,
+                                timeSpent = overlayActivityState.timeSpent
+                            )
                             Text(
                                 text = "How long do you want to use?",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             ButtonGrid(
-                                appData = appData,
+                                appData = overlayActivityState.appData,
+                                timeSpent = overlayActivityState.timeSpent,
                                 onTimeExtended = {
                                     overlayViewModel.extendTime(it)
                                     finish()
@@ -105,17 +111,26 @@ class OverlayActivity : ComponentActivity() {
         this.startActivity(homeIntent)
         finishAffinity()
     }
+
+    override fun onPause() {
+        super.onPause()
+        finish()
+    }
 }
+
 
 
 
 @Preview
 @Composable
-fun UsageCard(appData: AppData? = AppData("com.hritik.appreminder")) {
-
+fun UsageCard(
+    appData: AppData? = AppData("com.hritik.appreminder"),
+    timeSpent: Long = 0
+) {
     var appData = appData?: AppData("com.hritik.appreminder")
-    val limitLeft:Long = appData.timeLimit - appData.timeSpent
-    val progress:Float = if(appData.timeLimit == 0L) 0f else (appData.timeSpent.toFloat() / appData.timeLimit.toFloat())
+    val limitLeft:Long = max(0,appData.timeLimit - timeSpent)
+    val totalTime = timeSpent + limitLeft
+    val progress:Float = if(totalTime == 0L) 0f else (timeSpent.toFloat() / totalTime)
 
     Column(
         modifier = Modifier.padding(10.dp).fillMaxWidth(),
@@ -139,7 +154,7 @@ fun UsageCard(appData: AppData? = AppData("com.hritik.appreminder")) {
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = "${appData.timeSpent.milliseconds.inWholeHours % 24} hrs ${appData.timeSpent.milliseconds.inWholeMinutes % 60} mins",
+                    text = "${timeSpent.milliseconds.inWholeHours % 24} hrs ${timeSpent.milliseconds.inWholeMinutes % 60} mins",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
@@ -172,12 +187,13 @@ fun UsageCard(appData: AppData? = AppData("com.hritik.appreminder")) {
 @Composable
 fun ButtonGrid(
     appData: AppData? = AppData("com.hritik.appreminder"),
+    timeSpent: Long = 0,
     onTimeExtended:(Long) -> Unit = {},
     onClose:() -> Unit = {}
 ) {
     val minutes = listOf(1,2,5,10)
     var appData = appData?: AppData("com.hritik.appreminder")
-    val limitLeft:Long = appData.timeLimit - appData.timeSpent
+    val limitLeft:Long = max(0,appData.timeLimit - timeSpent)
 
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -200,7 +216,6 @@ fun ButtonGrid(
             Text("Close")
         }
     }
-
 }
 
 

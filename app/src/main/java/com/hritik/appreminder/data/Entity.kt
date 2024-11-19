@@ -9,6 +9,5 @@ import androidx.room.PrimaryKey
 data class AppData (
     @PrimaryKey val packageName:String,
     @ColumnInfo(name = "time_limit") var timeLimit: Long = 0,
-    @ColumnInfo(name = "time_spent") var timeSpent: Long = 0,
     @ColumnInfo(name = "extended_time") var extendedTime: Long = 0
 )

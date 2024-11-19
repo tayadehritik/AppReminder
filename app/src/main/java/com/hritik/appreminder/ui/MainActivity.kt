@@ -37,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -45,7 +44,7 @@ import androidx.lifecycle.lifecycleScope
 import com.hritik.appreminder.service.AppReminderService
 import com.hritik.appreminder.ui.theme.AppReminderTheme
 import com.hritik.appreminder.viewmodel.MainViewModel
-import com.hritik.appreminder.viewmodel.MainActivityState
+import com.hritik.appreminder.viewmodel.data.MainActivityState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,7 +79,6 @@ class MainActivity : ComponentActivity() {
                             grantOverlayPermission = { grantOverlayPermission() },
                             grantNotificationPermission = { requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),0) },
                             startForegroundService = { startService(serviceIntent) },
-                            dailyReset = { mainViewModel.dailyReset() }
                         )
                         HorizontalDivider()
                         LazyColumn(
@@ -103,7 +101,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         if(mainActivityState.dialogState.enabled) {
-                            val localContext = LocalContext.current
                             timeDialog(
                                 timeLimit = mainActivityState.trackedApps.get(mainActivityState.dialogState.packageName)?.timeLimit ?: 0,
                                 onDismissRequest = {
@@ -170,7 +167,6 @@ fun ButtonGrid(
     grantOverlayPermission:() -> Unit = {},
     grantNotificationPermission:() -> Unit = {},
     startForegroundService:() -> Unit = {},
-    dailyReset:() -> Unit = {}
 ) {
     Column(
         modifier = Modifier.padding(10.dp)
@@ -206,13 +202,6 @@ fun ButtonGrid(
                     )
         ) {
             Text("Start Foreground Service")
-        }
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = dailyReset,
-            enabled = true
-        ) {
-            Text("Daily Reset")
         }
     }
 }

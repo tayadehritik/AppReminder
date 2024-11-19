@@ -1,4 +1,4 @@
-package com.hritik.appreminder.viewmodel
+package com.hritik.appreminder.viewmodel.data
 
 import com.hritik.appreminder.data.AppData
 

@@ -24,7 +24,4 @@ interface AppsDAO {
     @Query("SELECT * FROM appdata WHERE packageName=:packageName")
     suspend fun getAppdata(packageName:String?): AppData?
 
-
-    @Query("UPDATE appdata SET time_spent = 0, extended_time = 0")
-    suspend fun dailyReset()
 }

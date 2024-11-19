@@ -42,7 +42,7 @@ class AppReminderService :Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val overlayIntent = Intent(this, OverlayActivity::class.java)
-        overlayIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+        overlayIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this,
@@ -59,7 +59,7 @@ class AppReminderService :Service() {
 
         timer.schedule(timerTask {
             CoroutineScope(Dispatchers.IO).launch {
-                monitorEvents(overlayIntent)
+                monitorEvents()
                 logUsage(overlayIntent)
             }
         }, 0,  1000)
@@ -71,7 +71,7 @@ class AppReminderService :Service() {
         return null
     }
 
-    fun monitorEvents(overlayIntent: Intent) {
+    fun monitorEvents() {
         val events = usageStatsManager.queryEvents(System.currentTimeMillis()-(1000), System.currentTimeMillis())
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -81,10 +81,6 @@ class AppReminderService :Service() {
                 when(event.eventType) {
                     UsageEvents.Event.ACTIVITY_RESUMED -> {
                         activeApp = appData
-                        if(appData.extendedTime <= 0) {
-                            overlayIntent.putExtra("packageName",appData.packageName)
-                            startActivity(overlayIntent)
-                        }
                     }
                     UsageEvents.Event.ACTIVITY_PAUSED -> {
                         activeApp = null
@@ -96,9 +92,8 @@ class AppReminderService :Service() {
 
     suspend fun logUsage(overlayIntent:Intent) {
         activeApp?.let { activeApp ->
-            if(activeApp.extendedTime > 0 && activeApp.timeSpent < activeApp.timeLimit){
+            if(activeApp.extendedTime > 0){
                 activeApp.extendedTime -= 1000L
-                activeApp.timeSpent += 1000L
                 appsDAO.updateAppData(activeApp)
             }
             else{
